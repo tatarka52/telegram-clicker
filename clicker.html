@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кликер</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .score-container {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        
+        .score {
+            font-size: 64px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #3390ec);
+        }
+        
+        .label {
+            font-size: 16px;
+            color: var(--tg-theme-hint-color, #999);
+            margin-top: 10px;
+        }
+        
+        .click-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(145deg, #3390ec, #2575c9);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(51, 144, 236, 0.3);
+            transition: all 0.1s;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .click-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(51, 144, 236, 0.3);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #3390ec);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+        
+        .reset-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: var(--tg-theme-destructive-text-color, #e53935);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .user-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Кликер</h1>
+        
+        <div class="score-container">
+            <div class="score" id="score">0</div>
+            <div class="label">очков</div>
+        </div>
+        
+        <button class="click-btn" id="clickBtn">
+            КЛИК!
+        </button>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="clicks">0</div>
+                <div class="stat-label">Всего кликов</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="best">0</div>
+                <div class="stat-label">Рекорд</div>
+            </div>
+        </div>
+        
+        <div class="user-info" id="userInfo">
+            Загрузка...
+        </div>
+        
+        <button class="reset-btn" onclick="resetGame()">
+            🔄 Сбросить прогресс
+        </button>
+    </div>
+    
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();  // Развернуть на весь экран
+        
+        // Переменные игры
+        let score = 0;
+        let totalClicks = 0;
+        let bestScore = 0;
+        
+        // Элементы
+        const scoreEl = document.getElementById('score');
+        const clicksEl = document.getElementById('clicks');
+        const bestEl = document.getElementById('best');
+        const clickBtn = document.getElementById('clickBtn');
+        const userInfoEl = document.getElementById('userInfo');
+        
+        // Загрузка сохранённых данных
+        function loadData() {
+            const saved = localStorage.getItem('clickerData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                score = data.score || 0;
+                totalClicks = data.totalClicks || 0;
+                bestScore = data.bestScore || 0;
+            }
+            updateDisplay();
+        }
+        
+        // Сохранение данных
+        function saveData() {
+            const data = { score, totalClicks, bestScore };
+            localStorage.setItem('clickerData', JSON.stringify(data));
+        }
+        
+        // Обновление дисплея
+        function updateDisplay() {
+            scoreEl.textContent = score;
+            clicksEl.textContent = totalClicks;
+            bestEl.textContent = bestScore;
+        }
+        
+        // Обработка клика
+        clickBtn.addEventListener('click', function() {
+            // Вибрация (тактильный отклик)
+            tg.HapticFeedback.impactOccurred('light');
+            
+            // Увеличиваем счёт
+            score++;
+            totalClicks++;
+            
+            // Обновляем рекорд
+            if (score > bestScore) {
+                bestScore = score;
+            }
+            
+            updateDisplay();
+            saveData();
+        });
+        
+        // Сброс прогресса
+        function resetGame() {
+            if (confirm('Сбросить весь прогресс?')) {
+                score = 0;
+                totalClicks = 0;
+                bestScore = 0;
+                updateDisplay();
+                saveData();
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+        }
+        
+        // Показываем информацию о пользователе
+        function showUserInfo() {
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                userInfoEl.innerHTML = `
+                    👤 <strong>${user.first_name} ${user.last_name || ''}</strong><br>
+                    @${user.username || 'нет username'}
+                `;
+            } else {
+                userInfoEl.textContent = 'Пользователь не определён';
+            }
+        }
+        
+        // Настройка главной кнопки Telegram
+        tg.MainButton.setText('ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ');
+        tg.MainButton.onClick(function() {
+            tg.sendData(`Мой счёт: ${score} очков!`);
+        });
+        
+        // Показываем главную кнопку только если есть счёт
+        if (score > 0) {
+            tg.MainButton.show();
+        }
+        
+        // Загрузка при старте
+        loadData();
+        showUserInfo();
+        
+        // Сообщаем Telegram что приложение готово
+        tg.ready();
+    </script>
+</body>
+</html>
